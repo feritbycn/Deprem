@@ -1,0 +1,34 @@
+name: APK ozet
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zip dosyasini ac
+        run: unzip -q -o DepremKalkani.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Android lisanslarini kabul et
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: APK derle
+        working-directory: DepremKalkani
+        run: |
+          set +e
+          gradle assembleDebug --no-daemon --console=plain > ../build.log 2>&1
+          status=$?
+          echo "=========== HATA OZETI ==========="
+          grep -nE "^e: |What went wrong" -A3 ../build.log | head -70
+          echo "=========== BITTI (cikis kodu: $status) ==========="
+          exit $status
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DepremKalkani-APK
+          path: DepremKalkani/app/build/outputs/apk/debug/*.apk
